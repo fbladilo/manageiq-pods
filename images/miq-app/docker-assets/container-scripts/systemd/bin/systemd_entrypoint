@@ -1,0 +1,6 @@
+#!/bin/bash
+
+USER_ID=$(id -u)
+[[ ${USER_UID} != ${USER_ID} ]] && sed "s@${USER_NAME}:x:\${USER_ID}:@${USER_NAME}:x:${USER_ID}:@g" ${SYSTEMD_APP_ROOT}/etc/passwd.template > /etc/passwd
+
+exec /usr/lib/systemd/systemd-starter
