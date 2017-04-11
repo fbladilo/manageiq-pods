@@ -160,9 +160,8 @@ RUN source /etc/default/evm && \
 RUN source /etc/default/evm && \
     cd ${SUI_ROOT} && \
     yarn install --production && \
-    yarn run build
-#    yarn run build && \
-#    yarn cache clean
+    yarn run build && \
+    yarn cache clean
 
 ## Expose required container ports
 EXPOSE 80 443
@@ -175,10 +174,10 @@ COPY docker-assets/appliance-initialize.sh /bin
 ADD docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
 
 ## Setup user build execution and application runtime
-RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup
-
+RUN chmod -R ug+x ${SYSTEMD_APP_ROOT} && \
+    ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
 ## Enable services on systemd, prepare systemd user account and setup
-RUN systemctl set-default multi-user.target && \
+    systemctl set-default multi-user.target && \
     systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
     ${SYSTEMD_APP_ROOT}/tmp/systemd_setup
 
