@@ -1,6 +1,9 @@
 #!/bin/bash
 
 USER_ID=$(id -u)
-[[ ${USER_UID} != ${USER_ID} ]] && sed "s@${USER_NAME}:x:\${USER_ID}:@${USER_NAME}:x:${USER_ID}:@g" ${SYSTEMD_APP_ROOT}/etc/passwd.template > /etc/passwd
+[[ ${USER_UID} != ${USER_ID} ]] && sed "s@${USER_NAME}:x:\${USER_ID}:@${USER_NAME}:x:${USER_ID}:@g" ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template > /etc/passwd
+
+# dump docker container run variable into a file for systemd to load
+env > ${CONTAINER_SCRIPTS_ROOT}/etc/container.env.vars
 
 exec /usr/lib/systemd/systemd-starter

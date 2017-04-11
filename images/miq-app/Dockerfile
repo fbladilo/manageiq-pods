@@ -83,16 +83,6 @@ RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.n
                    &&                      \
     yum clean all
 
-## Systemd cleanup base image
-RUN (cd /lib/systemd/system/sysinit.target.wants && for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -vf $i; done) && \
-    rm -vf /lib/systemd/system/multi-user.target.wants/* && \
-    rm -vf /etc/systemd/system/*.wants/* && \
-    rm -vf /lib/systemd/system/local-fs.target.wants/* && \
-    rm -vf /lib/systemd/system/sockets.target.wants/*udev* && \
-    rm -vf /lib/systemd/system/sockets.target.wants/*initctl* && \
-    rm -vf /lib/systemd/system/basic.target.wants/* && \
-    rm -vf /lib/systemd/system/anaconda.target.wants/*
-
 ## Download chruby and chruby-install, install, setup environment, clean all
 RUN curl -sL https://github.com/postmodern/chruby/archive/v0.3.9.tar.gz | tar xz && \
     cd chruby-0.3.9 && \
@@ -160,32 +150,31 @@ RUN source /etc/default/evm && \
 RUN source /etc/default/evm && \
     cd ${SUI_ROOT} && \
     yarn install --production && \
-    yarn run build
+    yarn run build && \
+    yarn cache clean
 
 ## Expose required container ports
 EXPOSE 80 443
 
 ## Copy OpenShift and appliance-initialize scripts, add systemd service unit file
-COPY docker-assets/entrypoint /usr/bin
 COPY docker-assets/container.data.persist /
 COPY docker-assets/appliance-initialize.service /usr/lib/systemd/system
 COPY docker-assets/appliance-initialize.sh /bin
 ADD docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
 
 ## Setup user build execution and application runtime
-RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
-    chmod -R ug+x ${SYSTEMD_APP_ROOT}/bin ${SYSTEMD_APP_ROOT}/etc ${SYSTEMD_APP_ROOT}/tmp
-
+RUN chmod -R ug+x ${SYSTEMD_APP_ROOT} && \
+    ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
 ## Enable services on systemd, prepare systemd user account and setup
-RUN systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
+    systemctl set-default multi-user.target && \
+    systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
     ${SYSTEMD_APP_ROOT}/tmp/systemd_setup
-
-## Arbitrary UID recognition at runtime for OpenShift deployments
-RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
 
 ## Set User
 USER ${USER_UID}
 
+## Arbitrary UID recognition at runtime for OpenShift deployments
+RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
+
 ## Call systemd to bring up system
-ENTRYPOINT ["entrypoint"]
-CMD [ "/usr/sbin/init" ]
+CMD [ "/sbin/init" ]
