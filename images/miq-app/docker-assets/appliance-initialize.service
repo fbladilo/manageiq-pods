@@ -5,7 +5,7 @@ Before=evmserverd.service
 [Service]
 TimeoutStartSec=10m
 Type=oneshot
-EnvironmentFile=/container.env.vars
+EnvironmentFile=${CONTAINER_SCRIPTS_ROOT}/etc/container.env.vars
 ExecStart=/bin/appliance-initialize.sh
 ExecStartPost=/usr/bin/systemctl disable appliance-initialize
 ExecStopPost=-/bin/sh -c '${CONTAINER_SCRIPTS_ROOT}/appliance-stop-post'

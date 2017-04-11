@@ -161,6 +161,8 @@ RUN source /etc/default/evm && \
     cd ${SUI_ROOT} && \
     yarn install --production && \
     yarn run build
+#    yarn run build && \
+#    yarn cache clean
 
 ## Expose required container ports
 EXPOSE 80 443
@@ -173,8 +175,7 @@ COPY docker-assets/appliance-initialize.sh /bin
 ADD docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
 
 ## Setup user build execution and application runtime
-RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
-    chmod -R ug+x ${SYSTEMD_APP_ROOT}/bin ${CONTAINER_SCRIPTS_ROOT}/etc ${SYSTEMD_APP_ROOT}/tmp
+RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup
 
 ## Enable services on systemd, prepare systemd user account and setup
 RUN systemctl set-default multi-user.target && \
@@ -188,5 +189,4 @@ USER ${USER_UID}
 RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
 
 ## Call systemd to bring up system
-ENTRYPOINT ["entrypoint"]
 CMD [ "/sbin/init" ]
