@@ -174,18 +174,19 @@ ADD docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
 
 ## Setup user build execution and application runtime
 RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
-    chmod -R ug+x ${SYSTEMD_APP_ROOT}/bin ${SYSTEMD_APP_ROOT}/etc ${SYSTEMD_APP_ROOT}/tmp
+    chmod -R ug+x ${SYSTEMD_APP_ROOT}/bin ${CONTAINER_SCRIPTS_ROOT}/etc ${SYSTEMD_APP_ROOT}/tmp
 
 ## Enable services on systemd, prepare systemd user account and setup
-RUN systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
+RUN systemctl set-default multi-user.target && \
+    systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
     ${SYSTEMD_APP_ROOT}/tmp/systemd_setup
-
-## Arbitrary UID recognition at runtime for OpenShift deployments
-RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
 
 ## Set User
 USER ${USER_UID}
 
+## Arbitrary UID recognition at runtime for OpenShift deployments
+RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
+
 ## Call systemd to bring up system
 ENTRYPOINT ["entrypoint"]
-CMD [ "/usr/sbin/init" ]
+CMD [ "/sbin/init" ]
