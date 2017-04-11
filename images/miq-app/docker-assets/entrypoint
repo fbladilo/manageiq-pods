@@ -1,6 +1,0 @@
-#!/bin/bash
-
-# dump docker container run variable into a file for systemd to load
-env > ${CONTAINER_SCRIPTS_ROOT}/etc/container.env.vars
-
-exec "$@"
