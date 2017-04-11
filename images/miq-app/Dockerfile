@@ -157,7 +157,6 @@ RUN source /etc/default/evm && \
 EXPOSE 80 443
 
 ## Copy OpenShift and appliance-initialize scripts, add systemd service unit file
-COPY docker-assets/entrypoint /usr/bin
 COPY docker-assets/container.data.persist /
 COPY docker-assets/appliance-initialize.service /usr/lib/systemd/system
 COPY docker-assets/appliance-initialize.sh /bin
