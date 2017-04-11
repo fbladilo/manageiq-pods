@@ -8,6 +8,8 @@ ARG REF=master
 ENV container=docker \
     LANG=en_US.UTF-8 \
     TERM=xterm \
+    USER_NAME=manageiq \
+    USER_UID=10001 \
     APP_ROOT=/var/www/miq/vmdb \
     APP_ROOT_PERSISTENT=/persistent \
     APP_ROOT_PERSISTENT_REGION=/persistent-region \
@@ -15,6 +17,7 @@ ENV container=docker \
     SUI_ROOT=/opt/manageiq/manageiq-ui-service \ 
     RUBY_GEMS_ROOT=/opt/rubies/ruby-2.3.1/lib/ruby/gems/2.3.0 \
     CONTAINER_SCRIPTS_ROOT=/opt/manageiq/container-scripts \
+    SYSTEMD_APP_ROOT=/opt/manageiq/container-scripts/systemd \
     IMAGE_VERSION=${REF}
 
 ## Atomic/OpenShift Labels
@@ -124,7 +127,7 @@ RUN ${APPLIANCE_ROOT}/setup && \
     mkdir ${APP_ROOT}/log/apache && \
     mkdir ${APP_ROOT_PERSISTENT} && \
     mkdir ${APP_ROOT_PERSISTENT_REGION} && \
-    mkdir -p ${CONTAINER_SCRIPTS_ROOT} && \
+    mkdir -p ${CONTAINER_SCRIPTS_ROOT}/etc && \
     mv /etc/httpd/conf.d/ssl.conf{,.orig} && \
     echo "# This file intentionally left blank. ManageIQ maintains its own SSL configuration" > /etc/httpd/conf.d/ssl.conf && \
     cp ${APP_ROOT}/config/cable.yml.sample ${APP_ROOT}/config/cable.yml && \
@@ -167,10 +170,21 @@ COPY docker-assets/entrypoint /usr/bin
 COPY docker-assets/container.data.persist /
 COPY docker-assets/appliance-initialize.service /usr/lib/systemd/system
 COPY docker-assets/appliance-initialize.sh /bin
-ADD  docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
+ADD docker-assets/container-scripts ${CONTAINER_SCRIPTS_ROOT}
 
-## Enable services on systemd
-RUN systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond
+## Setup user build execution and application runtime
+RUN ${SYSTEMD_APP_ROOT}/tmp/user_setup && \
+    chmod -R ug+x ${SYSTEMD_APP_ROOT}/bin ${SYSTEMD_APP_ROOT}/etc ${SYSTEMD_APP_ROOT}/tmp
+
+## Enable services on systemd, prepare systemd user account and setup
+RUN systemctl enable appliance-initialize evmserverd evminit evm-watchdog miqvmstat miqtop crond && \
+    ${SYSTEMD_APP_ROOT}/tmp/systemd_setup
+
+## Arbitrary UID recognition at runtime for OpenShift deployments
+RUN sed "s@${USER_NAME}:x:${USER_UID}:@${USER_NAME}:x:\${USER_ID}:@g" /etc/passwd > ${CONTAINER_SCRIPTS_ROOT}/etc/passwd.template
+
+## Set User
+USER ${USER_UID}
 
 ## Call systemd to bring up system
 ENTRYPOINT ["entrypoint"]
